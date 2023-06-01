@@ -1,6 +1,12 @@
 const dayjs = require("dayjs");
 const utcPlugin = require("dayjs/plugin/utc");
-
+const defaultOptions = {
+  shiftSaturdayHolidays: true,
+  shiftSundayHolidays: true,
+  utc: false,
+  omit: [],
+  include: []
+}
 dayjs.extend(utcPlugin);
 
 const getDateFor = ({ day = 1, month, year }) =>
@@ -42,9 +48,31 @@ const getLastDayOf = (day, month, year) => {
 
 const allFederalHolidaysForYear = (
   year = new Date().getFullYear(),
-  { shiftSaturdayHolidays = true, shiftSundayHolidays = true } = {}
+  options = defaultOptions
 ) => {
-  const holidays = [];
+  var holidays = []; // changed holidays from constant - thfcme
+  
+  // this will need to be improved at a later date - thfcme
+  options.include == undefined ? options["include"] = [] : ""
+  options.omit == undefined ? options["omit"] = [] : ""
+
+  // push new holidays if needed  - thfcme
+  if (options.include.length > 0) {
+    options.include.forEach(function (o) {
+      if (o.mode == "getNthDayOf") {
+        holidays.push({
+          name: o.name,
+          date: getNthDayOf(o.n, o.day, o.month, year)
+        })
+      }
+      if (o.mode == "getDateFor") {
+        holidays.push({
+          name: o.name,
+          date: getDateFor({ day: o.day, month: o.month, year })
+        })
+      }
+    })
+  }
 
   // New Year's Day
   holidays.push({
@@ -123,16 +151,21 @@ const allFederalHolidaysForYear = (
     date: getDateFor({ day: 25, month: 12, year })
   });
 
+  // adjust allForYear and remove holidays listed in omit - thfcme
+  if (options.omit.length > 0) {
+    holidays = holidays.filter(item => !options.omit.includes(item.name))
+  }
+
   return holidays.map(holiday => {
     let date = dayjs(holiday.date);
 
-    if (date.day() === 0 && shiftSundayHolidays) {
+    if (date.day() === 0 && options.shiftSundayHolidays) {
       // Actual holiday falls on Sunday. Shift the observed date forward to
       // Monday.
       date = date.add(1, "day");
     }
 
-    if (date.day() === 6 && shiftSaturdayHolidays) {
+    if (date.day() === 6 && options.shiftSaturdayHolidays) {
       // Actual holiday falls on Saturday. Shift the observed date backward
       // to Friday.
       date = date.subtract(1, "day");
@@ -149,17 +182,17 @@ const allFederalHolidaysForYear = (
 
 const isAHoliday = (
   date = new Date(),
-  { shiftSaturdayHolidays = true, shiftSundayHolidays = true, utc = false } = {}
+  options = defaultOptions
 ) => {
+  const utc = options.utc
   const newDate = utc ? dayjs.utc(date) : dayjs(date);
   const year = newDate.year();
-
-  const shift = { shiftSaturdayHolidays, shiftSundayHolidays };
+  console.log("isaholiday:", options)
 
   // Get the holidays this year, plus check if New Year's Day of next year is
   // observed on December 31 and if so, add it to this year's list.
-  const allForYear = allFederalHolidaysForYear(year, shift);
-  const nextYear = allFederalHolidaysForYear(year + 1, shift);
+  const allForYear = allFederalHolidaysForYear(year, options);
+  const nextYear = allFederalHolidaysForYear(year + 1, options);
   allForYear.push(nextYear[0]);
 
   // If any dates in this year's holiday list match the one passed in, then
@@ -168,6 +201,8 @@ const isAHoliday = (
     holiday => holiday.dateString === newDate.format("YYYY-MM-DD")
   );
 };
+
+
 
 const getOneYearFromNow = () => {
   const future = new Date();
@@ -178,7 +213,7 @@ const getOneYearFromNow = () => {
 const federalHolidaysInRange = (
   startDate = new Date(),
   endDate = getOneYearFromNow(),
-  options = undefined
+  options = defaultOptions,
 ) => {
   const startYear = startDate.getFullYear();
   const endYear = endDate.getFullYear();

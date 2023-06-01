@@ -1,3 +1,58 @@
+
+# Fork Modifications
+
+When using `isAHoliday()`, you can now pass extra parameters in the options field to add or remove holidays. I implemented this functionality to avoid hardcoding the original holidays list.
+
+For instance, a company may not observe every federal holiday but may have additional holidays.
+
+In the following example, we can utilize `isAHoliday()` to check if a holiday falls on a specific date using the following options:
+
+```
+const options = { 
+  shiftSaturdayHolidays: true, 
+  shiftSundayHolidays: true, 
+  utc:false,
+  omit:
+  [
+    "Washington's Birthday",
+    "Columbus Day",
+    "Veterans Day",
+    "Juneteenth National Independence Day"
+  ],
+  include:[
+  {
+    name: `Thanksgiving Day Friday`,
+    mode: `getNthDayOf`,
+    n: 4,
+    day: 5,
+    month: 11
+  },
+  {
+    name: `Day After Christmas`,
+    mode: `getDateFor`,
+    day: 26,
+    month: 12
+  }
+  ]
+}
+```
+
+We are excluding the holidays listed in the 'omit' array, and we are including the 'Day after Thanksgiving Day' where n represents the 4th week of the month, day represents the 5th day of that week, and the month is November (11). Additionally, we are including 'Boxing Day,' which is observed in many countries on December 26th.
+
+I use the existing functions `getNthDayOf()` and `getDateFor()`
+
+The following should return `true` when the prior example of options is used:
+
+`isAHoliday("12/26/2023",options)`
+
+Note: The option for Thanksgiving Day Friday mentioned above might appear twice (for this year and the next year). Although I am unsure why this occurs, it is not a significant issue.
+
+`fork-test.js` just runs some console.log tests
+
+The original documentation follows:  
+
+---  
+
 # US Federal Holidays
 
 Builds and returns a list of all US federal holidays for a given year, and
